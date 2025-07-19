@@ -1,0 +1,259 @@
+// 随机延迟函数，模拟人类操作的自然间隔
+function randomDelay(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// 改进的 sleep 函数
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 模拟鼠标移动轨迹
+async function simulateMouseMove(element) {
+    if (!element) return;
+    const rect = element.getBoundingClientRect();
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight;
+    const endX = rect.left + rect.width / 2 + (Math.random() * 20 - 10); // 轻微偏移
+    const endY = rect.top + rect.height / 2 + (Math.random() * 20 - 10);
+
+    const steps = 10 + Math.floor(Math.random() * 15); // 随机步数
+    for (let i = 0; i <= steps; i++) {
+        const x = startX + (endX - startX) * (i / steps);
+        const y = startY + (endY - startY) * (i / steps);
+        window.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+        await sleep(randomDelay(10, 30));
+    }
+}
+
+// 模拟随机鼠标晃动（无目标）
+async function simulateRandomMouseWiggle() {
+    const x = Math.random() * window.innerWidth;
+    const y = Math.random() * window.innerHeight;
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+    await sleep(randomDelay(200, 500));
+}
+
+// 模拟页面滚动
+async function simulateScroll() {
+    const scrollDistance = Math.random() * 200 - 100; // 随机上下滚动
+    window.scrollBy(0, scrollDistance);
+    await sleep(randomDelay(300, 800));
+}
+
+// 模拟失焦行为
+async function simulateLoseFocus() {
+    if (Math.random() < 0.1) { // 10% 概率失焦
+        console.log("😴 模拟失焦");
+        document.activeElement?.blur();
+        await sleep(randomDelay(500, 2000));
+        // 重新聚焦输入框
+        const input = document.querySelector('input[type="text"]');
+        if (input) {
+            input.focus();
+            await sleep(randomDelay(200, 500));
+        }
+    }
+}
+
+// 模拟人类输入（60% 识别准确率，80% 更正率）
+async function triggerInput(input, value) {
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    const inputEvent = new Event('input', { bubbles: true });
+
+    let currentValue = input.value || '';
+    for (let i = 0; i < value.length; i++) {
+        const correctChar = value[i];
+        let charToType = correctChar;
+
+        // 40% 概率输入错误字符
+        if (Math.random() < 0.4) {
+            const wrongChar = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // 随机小写字母
+            charToType = wrongChar;
+            currentValue += charToType;
+            nativeInputValueSetter.call(input, currentValue);
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: charToType, bubbles: true }));
+            input.dispatchEvent(inputEvent);
+            input.dispatchEvent(new KeyboardEvent('keyup', { key: charToType, bubbles: true }));
+            await sleep(randomDelay(50, 150));
+
+            // 80% 概率更正错误
+            if (Math.random() < 0.8) {
+                currentValue = currentValue.slice(0, -1); // 删除错误字符
+                nativeInputValueSetter.call(input, currentValue);
+                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+                input.dispatchEvent(inputEvent);
+                input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Backspace', bubbles: true }));
+                await sleep(randomDelay(100, 300));
+                charToType = correctChar; // 输入正确字符
+            } else {
+                continue; // 不更正，保留错误
+            }
+        }
+
+        // 输入正确或更正后的字符
+        currentValue += charToType;
+        nativeInputValueSetter.call(input, currentValue);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: charToType, bubbles: true }));
+        input.dispatchEvent(inputEvent);
+        input.dispatchEvent(new KeyboardEvent('keyup', { key: charToType, bubbles: true }));
+        await sleep(randomDelay(50, 150)); // 自然按键间隔
+    }
+}
+
+// 改进的点击函数
+async function clickElement(element) {
+    if (element && !element.disabled) {
+        try {
+            await simulateMouseMove(element); // 模拟鼠标移动
+            element.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, view: window }));
+            await sleep(randomDelay(20, 50));
+            element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+            await sleep(randomDelay(20, 50));
+            element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+            element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+            console.log(`✅ 点击元素: ${element.textContent.trim().substring(0, 20)}`);
+            return true;
+        } catch (e) {
+            console.log(`❌ 点击失败: ${e.message}`);
+            return false;
+        }
+    }
+    return false;
+}
+
+// 模拟 Tab 键
+async function triggerSingleTab() {
+    const el = document.activeElement;
+    if (el) {
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', keyCode: 9, which: 9, bubbles: true }));
+        await sleep(randomDelay(20, 50));
+        el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Tab', code: 'Tab', keyCode: 9, which: 9, bubbles: true }));
+    }
+}
+
+// 查找按钮
+function findButton(text) {
+    const buttons = document.querySelectorAll('button');
+    return Array.from(buttons).find(btn => btn.textContent.includes(text));
+}
+
+// 等待输入框聚焦和新单词
+async function waitForInputFocusAndNewWord(maxAttempts = 10) {
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+        const input = document.querySelector('input[type="text"]');
+        const wordElems = document.querySelectorAll('div[class*="text-"]');
+        const activeWord = Array.from(wordElems).find(el =>
+            el.innerText.trim().length > 0 &&
+            window.getComputedStyle(el).color === 'rgb(255, 255, 255)'
+        );
+
+        if (input && document.activeElement === input && activeWord) {
+            return true;
+        }
+        await triggerSingleTab();
+        await sleep(randomDelay(300, 700));
+        attempts++;
+    }
+    return false;
+}
+
+// 模拟双 Tab
+async function triggerDoubleTab() {
+    console.log("🔄🔄 模拟双 Tab 键");
+    await triggerSingleTab();
+    await sleep(randomDelay(80, 150));
+    await triggerSingleTab();
+}
+
+// 主循环
+async function main() {
+    let loopCount = 0;
+    const maxLoops = 100; // 限制最大循环次数
+
+    while (loopCount < maxLoops) {
+        loopCount++;
+        // 随机暂停，模拟人类休息（15% 概率）
+        if (Math.random() < 0.15) {
+            console.log("😴 模拟人类休息");
+            await sleep(randomDelay(1000, 5000));
+        }
+
+        // 模拟随机鼠标晃动（20% 概率）
+        if (Math.random() < 0.2) {
+            await simulateRandomMouseWiggle();
+        }
+
+        // 模拟页面滚动（20% 概率）
+        if (Math.random() < 0.2) {
+            await simulateScroll();
+        }
+
+        // 模拟失焦（10% 概率）
+        await simulateLoseFocus();
+
+        const input = document.querySelector('input[type="text"]');
+        if (!input) {
+            await sleep(randomDelay(800, 1500));
+            continue;
+        }
+
+        input.focus();
+        await clickElement(input);
+
+        const submitButton = findButton('Submit to Leaderboard');
+        if (submitButton) {
+            await sleep(randomDelay(500, 1000)); // 模拟人类思考
+            while (!await clickElement(submitButton)) await sleep(randomDelay(300, 600));
+            await sleep(randomDelay(1500, 3000));
+
+            const playAgainButton = findButton('Play Again');
+            if (playAgainButton) {
+                await sleep(randomDelay(500, 1000));
+                while (!await clickElement(playAgainButton)) await sleep(randomDelay(300, 600));
+                await sleep(randomDelay(2000, 4000));
+                await waitForInputFocusAndNewWord();
+                await triggerSingleTab();
+                continue;
+            }
+        }
+
+        const wordElems = document.querySelectorAll('div[class*="text-"]');
+        const activeWord = Array.from(wordElems).find(el =>
+            el.innerText.trim().length > 0 &&
+            window.getComputedStyle(el).color === 'rgb(255, 255, 255)'
+        );
+
+        if (!activeWord) {
+            await sleep(randomDelay(800, 1500));
+            continue;
+        }
+
+        const word = activeWord.innerText.trim();
+        console.log(`📝 正在输入: ${word}`);
+        await triggerInput(input, word + ' ');
+        await sleep(randomDelay(150, 300));
+
+        if (wordElems.length === 1) {
+            await triggerDoubleTab();
+            await sleep(randomDelay(800, 1200));
+
+            const playAgainButton = findButton('Play Again');
+            if (playAgainButton) {
+                console.log("🔄 双 Tab 可能失败，尝试点击 Play Again 按钮");
+                await sleep(randomDelay(500, 1000));
+                while (!await clickElement(playAgainButton)) await sleep(randomDelay(300, 600));
+                await sleep(randomDelay(2000, 4000));
+                await waitForInputFocusAndNewWord();
+                await triggerSingleTab();
+            }
+        }
+
+        await sleep(randomDelay(300, 800));
+    }
+    console.log("🔚 达到最大循环次数，脚本停止");
+}
+
+// 运行主函数
+main().catch(err => console.error("❌ 脚本错误:", err));
